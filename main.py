@@ -1,16 +1,3 @@
-"""
-This program will take a source directory and sort files within the directory by their creation date.
-New date directories are created if they do not already exist.
-Files are moved to their respective date directories.
-
-Settings can be modified including:
-- Source directory
-- Target directory
-- Backup: Enabled or Disabled
-- File types to include
-- File types to exclude
-"""
-
 # Imports
 import os
 import shutil
@@ -104,7 +91,7 @@ class FileSorterApp(QtWidgets.QWidget):
         self.file_types_to_include = [ext.strip() for ext in self.include_entry.text().split(',') if ext.strip()]
         self.file_types_to_exclude = [ext.strip() for ext in self.exclude_entry.text().split(',') if ext.strip()]
 
-        # Validate source and target directories.
+        # Ensure the source and target directories exist.
         if not os.path.exists(self.source_directory) or not os.path.exists(self.target_directory):
             if not os.path.exists(self.source_directory):
                 QtWidgets.QMessageBox.critical(self, "Error", ERROR_MESSAGES["source_not_exist"])
@@ -114,39 +101,31 @@ class FileSorterApp(QtWidgets.QWidget):
                 print('ERROR: Target directory does not exist.')
             return False
         return True
-
+    
     def start_sorting(self):
         if not self.validate():
-            print('x')
-        else:
-            log_message("**************************************************\n", level="decorating")
-            log_message(f"New Log Entry - {datetime.now()}\n", level="decorating")
-            log_message("**************************************************\n", level="decorating")
+            return
 
-            log_message("Settings:\n", level="decorating")
-            log_message(f"  - Source Directory: {self.source_directory}\n", level="decorating")
-            log_message(f"  - Target Directory: {self.target_directory}\n", level="decorating")
-            log_message(f"  - Backup: {'Enabled' if self.backup_wanted else 'Disabled'}\n", level="decorating")
-            log_message(f"  - File Types To Include: {', '.join(self.file_types_to_include) if self.file_types_to_include else 'All'}\n", level="decorating")
-            log_message(f"  - File Types To Exclude: {', '.join(self.file_types_to_exclude) if self.file_types_to_exclude else 'None'}\n", level="decorating")
+        log_message("**************************************************\n", level="decorating", log_file=self.log_file)
+        log_message(f"New Log Entry - {datetime.now()}\n", level="decorating", log_file=self.log_file)
+        log_message("**************************************************\n", level="decorating", log_file=self.log_file)
 
+        log_message("Settings:\n", level="decorating", log_file=self.log_file)
+        log_message(f"  - Source Directory: {self.source_directory}\n", level="decorating", log_file=self.log_file)
+        log_message(f"  - Target Directory: {self.target_directory}\n", level="decorating", log_file=self.log_file)
+        log_message(f"  - Backup: {'Enabled' if self.backup_wanted else 'Disabled'}\n", level="decorating", log_file=self.log_file)
+        log_message(f"  - File Types To Include: {', '.join(self.file_types_to_include) if self.file_types_to_include else 'All'}\n", level="decorating", log_file=self.log_file)
+        log_message(f"  - File Types To Exclude: {', '.join(self.file_types_to_exclude) if self.file_types_to_exclude else 'None'}\n", level="decorating", log_file=self.log_file)
 
-        """# Sort and move files
+        log_message("--------------------------------------------------\n", level="decorating", log_file=self.log_file)
+
         grouped_files = sort_files_by_date(self.source_directory, self.log_file)
-        total_files_found, total_files_moved = move_files(
-            grouped_files, self.source_directory, self.target_directory,
-            self.backup_wanted, self.backup_directory,
-            self.file_types_to_include, self.file_types_to_exclude,
-            self.log_file
-        )
+        move_files(grouped_files, self.source_directory, self.target_directory, self.backup_wanted, self.backup_directory, self.file_types_to_include, self.file_types_to_exclude, self.log_file)
 
-        # Only show completion message if files were moved
-        if total_files_moved > 0:
-            QtWidgets.QMessageBox.information(self, "Completed", f"Total Files Moved: {total_files_moved} of {total_files_found}")
-"""
-    
+        log_message("\n==================================================\n", level="decorating", log_file=self.log_file)
+
 # Handles logging and printing messages.
-def log_message(message, level="info", log_file=None, backup_wanted=False):
+def log_message(message, level="info", log_file="log.txt", backup_wanted=False):
     levels = {
         "info": "",
         "moving": "MOVING: ",
@@ -173,19 +152,20 @@ def log_message(message, level="info", log_file=None, backup_wanted=False):
 
 # Gets the sort method for each file either based on the file name of YYYYMMDD (first 8 digits), otherwise if not named like that, based on creation date.
 def get_sort_key(file, source_directory):
-    file_path = os.path.join(source_directory, file)
+    file_path = os.path.join(source_directory, file) 
 
     # Sorts by file name
     if len(file) >= 8 and file[:8].isdigit():
         return datetime.strptime(file[:8], "%Y%m%d")
     
     # Sorts by creation date
-    return datetime.fromtimestamp(os.path.getmtime(file_path))
+    else:
+        return datetime.fromtimestamp(os.path.getmtime(file_path))
 
 # Sorts and orders files and stores it in a dictionary. If the file is a directory or the log file, it will skip it.
 def sort_files_by_date(source_directory, log_file):
     files = os.listdir(source_directory)
-    sorted_files = sorted(files, key=get_sort_key)
+    sorted_files = sorted(files, key=lambda file: get_sort_key(file, source_directory))
     grouped_files = {}
 
     for file in sorted_files:
@@ -195,7 +175,7 @@ def sort_files_by_date(source_directory, log_file):
         if os.path.isdir(file_path) or file_path == log_file: #or file_path == os.path.join(source_directory, "log.txt"): <-- This is to also skip a log file if in the source directory.
             continue
 
-        date_key = get_sort_key(file).date().strftime("%Y_%m_%d")
+        date_key = get_sort_key(file, source_directory).date().strftime("%Y_%m_%d")
         grouped_files.setdefault(date_key, []).append(file) # Groups files by the same date key together, creates a new key under the date key if it doesn't exist.
     return grouped_files
 
@@ -204,19 +184,19 @@ def move_files(grouped_files, source_directory, target_directory, backup_wanted,
     total_files_found = sum(len(files) for files in grouped_files.values())
     total_files_moved = 0
 
-    log_message(f"TOTAL FILES FOUND: {total_files_found}\n", level="decorating")
+    log_message(f"TOTAL FILES FOUND: {total_files_found}\n", level="decorating", log_file=log_file)
 
     # EXIT 1 - Check for conflicts between whitelist and blacklist
     if set(file_types_to_include) & set(file_types_to_exclude):
-        log_message("Conflict detected between whitelist and blacklist.", level="error")
-        log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
+        log_message("Conflict detected between whitelist and blacklist.", level="error", log_file=log_file)
+        log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating", log_file=log_file)
         print("ERROR: Conflict detected between whitelist and blacklist.")
         return total_files_found, total_files_moved
 
     # EXIT 2 - Checks if there are no files to move.
     if not total_files_found:
-        log_message("No files to move.", level="error")
-        log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
+        log_message("No files to move.", level="error", log_file=log_file)
+        log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating", log_file=log_file)
         print("ERROR: No files to move.")
         return total_files_found, total_files_moved
 
@@ -229,9 +209,9 @@ def move_files(grouped_files, source_directory, target_directory, backup_wanted,
         date_directory = os.path.join(target_directory, date)
         if not os.path.exists(date_directory):
             os.makedirs(date_directory, exist_ok=True)
-            log_message(f"New directory created: {date}")
+            log_message(f"New directory created: {date}", log_file=log_file)
         else:
-            log_message(f"Using existing directory: {date}")
+            log_message(f"Using existing directory: {date}", log_file=log_file)
 
         for file in files:
             source_path = os.path.join(source_directory, file)
@@ -239,16 +219,16 @@ def move_files(grouped_files, source_directory, target_directory, backup_wanted,
 
             # FILE SKIP 1 - Checks and handles if the file already exists in the destination directory.
             if os.path.exists(destination_path):
-                log_message(f"File '{file}' already exists in '{date_directory.replace(os.sep, '/')}'.", level="warning")
+                log_message(f"File '{file}' already exists in '{date_directory.replace(os.sep, '/')}'.", level="warning", log_file=log_file)
                 continue
             
             # FILE SKIP 2 - Check file extension against whitelist and blacklist.
             file_extension = os.path.splitext(file)[1].lower()
             if file_types_to_include and file_extension not in file_types_to_include:
-                log_message(f"File '{file}' excluded ({file_extension} not in include list).", level="warning")
+                log_message(f"File '{file}' excluded ({file_extension} not in include list).", level="warning", log_file=log_file)
                 continue
             if file_extension in file_types_to_exclude:
-                log_message(f"File '{file}' excluded ({file_extension} in exclude list).", level="warning")
+                log_message(f"File '{file}' excluded ({file_extension} in exclude list).", level="warning", log_file=log_file)
                 continue
 
             # Backups the file if backup is wanted and overwrites the previous backup file if it already exists.
@@ -256,11 +236,11 @@ def move_files(grouped_files, source_directory, target_directory, backup_wanted,
                 shutil.copy2(source_path, os.path.join(backup_directory, file))
 
             # Moves the file to the date directory.
-            log_message(f"File '{file}' to '{date_directory.replace(os.sep, '/')}'.", level="moving")
+            log_message(f"File '{file}' to '{date_directory.replace(os.sep, '/')}'.", level="moving", log_file=log_file)
             shutil.move(source_path, destination_path)
             total_files_moved += 1
 
-    log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating")
+    log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating", log_file=log_file)
     print("Completed.")
     print(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}")
     return total_files_found, total_files_moved
