@@ -3,13 +3,14 @@
 </p>
 
 # File Sorter By Date (FSBD) - GUI VERSION
-File Sorter By Date is a tool to automate organizing files into folders by date. FSBD first sorts files by the naming format YYYYMMDD, standard of smartphone camera file naming, otherwise by creation date if the file name does not follow that format. The tool enables the user to specify the source and target directories, whether to backup files, and the file types to include and exclude in the config.json file. Extensive logging and error handling is implemented.
+File Sorter By Date is a tool to automate organizing files into folders by date. FSBD first sorts files by the naming format YYYYMMDD, standard of smartphone camera file naming, otherwise by creation date if the file name does not follow that format. The tool enables the user to specify the source and target directories, whether to backup files, and the file types to include and exclude through a GUI. Extensive logging and error handling is implemented.
 
 ## About This Project
 This file sorter works by inputting the source and target directories, whether to backup files, and the file types to include and exclude in the GUI and running to result in a sorted file structure in the target directory. I created this tool after recognizing the extensive time I spent manually sorting files into folders by date after downloading them off my phone. This version is a GUI version, created based on my previous code that ran in the terminal with a config.json file (see other project).
 
 ## Technologies Used
 - Python 3.13
+- PyQt5
 
 ## Installation
 To install the File Sorter By Date, follow these steps:
@@ -23,14 +24,28 @@ To install the File Sorter By Date, follow these steps:
 
 2. Ensure that you have python running on your system.
 
-3. Ensure that you have a text or code editor like notepad installed on your system to edit the settings in the config.json file.
+3. Create and activate a virtual environment:
+   - On Windows:
 
-4. Find the file path of the cloned repository and navigate to it.
    ```bash
-   DIR
+   python -m venv .venv
+   .\.venv\Scripts\activate
    ```
 
-5. Once settings are configured, run the program.
+   - On macOS and Linux:
+   
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+
+4. Install the required dependencies:
+
+   ```bash
+   pip install PyQt5 
+   ```
+
+4. Run the program.
    ```bash
    python main.py
    ```
