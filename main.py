@@ -16,7 +16,7 @@ import os
 from datetime import datetime
 import shutil
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox, QProgressDialog
 
 class FileSorterApp(QtWidgets.QWidget):
     def __init__(self):
@@ -138,7 +138,7 @@ class FileSorterApp(QtWidgets.QWidget):
         self.log_message("\n", level="decorating", log_file=log_file, backup_wanted=backup_wanted)
 
         grouped_files = self.sort_files_by_date(source_directory, log_file)
-        total_files_found, total_files_moved = self.move_files(grouped_files, source_directory, target_directory, backup_wanted, file_types_to_include, file_types_to_exclude, log_file)
+        total_files_found, total_files_moved = self.move_files_with_progress(grouped_files, source_directory, target_directory, backup_wanted, file_types_to_include, file_types_to_exclude, log_file)
 
         self.log_message("\n==================================================\n", level="decorating", log_file=log_file, backup_wanted=backup_wanted)
         self.log_message("\n\n\n\n", level="decorating", log_file=log_file, backup_wanted=backup_wanted)
@@ -191,7 +191,7 @@ class FileSorterApp(QtWidgets.QWidget):
             grouped_files.setdefault(date_key, []).append(file)
         return grouped_files
 
-    def move_files(self, grouped_files, source_directory, target_directory, backup_wanted, file_types_to_include, file_types_to_exclude, log_file):
+    def move_files_with_progress(self, grouped_files, source_directory, target_directory, backup_wanted, file_types_to_include, file_types_to_exclude, log_file):
         total_files_found = sum(len(files) for files in grouped_files.values())
         total_files_moved = 0
 
@@ -213,6 +213,11 @@ class FileSorterApp(QtWidgets.QWidget):
         if backup_wanted:
             os.makedirs(backup_directory, exist_ok=True)
 
+        progress_dialog = QProgressDialog("Moving files...", "Cancel", 0, total_files_found, self)
+        progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.show()
+
         for date, files in grouped_files.items():
             date_directory = os.path.join(target_directory, date).replace('/', '\\')
             if not os.path.exists(date_directory):
@@ -222,6 +227,9 @@ class FileSorterApp(QtWidgets.QWidget):
                 self.log_message(f"Using existing directory: {date_directory}", log_file=log_file)
 
             for file in files:
+                if progress_dialog.wasCanceled():
+                    break
+
                 source_path = os.path.join(source_directory, file)
                 destination_path = os.path.join(date_directory, file)
 
@@ -243,6 +251,9 @@ class FileSorterApp(QtWidgets.QWidget):
                 self.log_message(f"File '{file}' to '{date_directory}'.", level="moving", log_file=log_file, backup_wanted=backup_wanted)
                 shutil.move(source_path, destination_path)
                 total_files_moved += 1
+                progress_dialog.setValue(total_files_moved)
+
+        progress_dialog.close()
 
         self.log_message(f"TOTAL FILES MOVED: {total_files_moved} of {total_files_found}\n", level="decorating", log_file=log_file)
         return total_files_found, total_files_moved
